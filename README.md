@@ -1,37 +1,41 @@
-# HelloID-Conn-Prov-Target-Topicus-Somtoday-ConnectAPI-Student-readme
+# HelloID-Conn-Prov-Target-Somtoday-Student
 
-| :warning: Warning - **You need to sign a contract with the supplier before implementing this connector**|
-|:---------------------------|
-| This repository contains the connector and configuration code only. The implementer is responsible to acquire the connection details such as username, password, certificate, etc. Please contact the client's application manager to coordinate the connector requirements.       |
+> [!IMPORTANT]
+> This repository contains the connector and configuration code only. The implementer is responsible to acquire the connection details such as username, password, certificate, etc. You might even need to sign a contract or agreement with the supplier before implementing this connector. Please contact the client's application manager to coordinate the connector requirements.
 
-| :information_source: Contact |
-|:---------------------------|
-| Please contact your local Tools4ever sales representative for further information and details about the implementation of this connector  |
-
-
-<br />
 <p align="center">
-  <img src="assets/logo.png">
+  <img src="./Logo.png"
 </p>
 
 ## Table of contents
 
-- [Introduction](#introduction)
-- [Getting started](#getting-started)
-  + [Connection settings](#connection-settings)
-  + [Prerequisites](#prerequisites)
-  + [Remarks](#remarks)
-- [Setup the connector](#setup-the-connector)
-- [Getting help](#getting-help)
-- [HelloID Docs](#helloid-docs)
+- [HelloID-Conn-Prov-Target-Somtoday-Student](#helloid-conn-prov-target-somtoday-student)
+  - [Table of contents](#table-of-contents)
+  - [Introduction](#introduction)
+  - [Getting started](#getting-started)
+    - [Connection settings](#connection-settings)
+    - [Correlation configuration](#correlation-configuration)
+    - [Available lifecycle actions](#available-lifecycle-actions)
+    - [Field mapping](#field-mapping)
+  - [Remarks](#remarks)
+    - [Configuration](#configuration)
+      - [Environment](#environment)
+        - [Proxy](#proxy)
+      - [Instelling](#instelling)
+    - [SchoolName](#schoolname)
+    - [leerlingNummer](#leerlingnummer)
+    - [AccountReference](#accountreference)
+    - [Remote Identifier Comparison](#remote-identifier-comparison)
+    - [Logging](#logging)
+  - [Development resources](#development-resources)
+    - [API endpoints](#api-endpoints)
+    - [API documentation](#api-documentation)
+  - [Getting help](#getting-help)
+  - [HelloID docs](#helloid-docs)
 
 ## Introduction
 
-_HelloID-Conn-Prov-Target-Topicus-Somtoday-ConnectAPI-Student_ is a _target_ connector. Topicus-Somtoday-ConnectAPI provides a set of REST API's that allow you to programmatically interact with it's data. The HelloID connector uses the API endpoints listed in the table below.
-
-| Endpoint     | Description |
-| ------------ | ----------- |
-| /connect/vestiging/leerling/account | Updates and retrieves student account information |
+HelloID-Conn-Prov-Target-Somtoday-Student is a target connector that integrates with Somtoday-Student, a system offering REST APIs for programmatic data interaction. This connector is responsible for creating student accounts (referred to as leerlingen) within Somtoday. However, the creation of student records is out of scope. Therefore, a student (leerling) must already exist in Somtoday before an account can be created.
 
 ## Getting started
 
@@ -39,32 +43,127 @@ _HelloID-Conn-Prov-Target-Topicus-Somtoday-ConnectAPI-Student_ is a _target_ con
 
 The following settings are required to connect to the API.
 
-| Setting      | Description                                    | Mandatory   |
-| ------------ | -----------                                    | ----------- |
-| ClientId     | The ClientId to connect to the API             | Yes         |
-| ClientSecret | The UserClientSecretName to connect to the API | Yes         |
-| Instelling   | The name of the organization in Somtoday       | Yes         |
-| BaseUrl      | The URL to the API                             | Yes         |
-| IsDebug      | When toggled, debug logging will be displayed  | No          |
+| Setting           | Description                                                         | Mandatory |
+| ----------------- | ------------------------------------------------------------------- | --------- |
+| ClientID          | The ClientID to connect to the API                                  | Yes       |
+| ClientSecret      | The ClientSecret to connect to the API                              | Yes       |
+| Instelling        | The name of the organization (instelling or schoolnaam) in Somtoday | Yes       |
+| Environment       | The somtoday environment you wish to connect to                     | Yes       |
+| UseConnectorProxy | The URL to the API                                                  | Yes       |
 
-### Prerequisites
+> [!WARNING]
+> The proxy requires different credentials. Make sure to configure the appropriate credentials for the _Tool4ever_ connector proxy in the configuration settings.
 
-The connector is created for both HelloID on-premises (using the HelloID agent) and cloud. When running this connector on-premises, make sure to have installed Windows PowerShell 5.1.
+### Correlation configuration
 
-### Remarks
-- As implementer, you need your own set of credentials before you can implement this connector. Therefore you need to sign a contract with the supplier.
+The correlation configuration is used to specify which properties will be used to match an existing account within _Somtoday-Student_ to a person in _HelloID_.
 
-- A School (also knows as an 'organization' within Somtoday) might have multiple departments (or vestigingen). Accounts are correlated based on the value of the 'Organization.Name' in the contract.
+| Setting                   | Value            |
+| ------------------------- | ---------------- |
+| Enable correlation        | `True`           |
+| Person correlation field  | `ExternalId`     |
+| Account correlation field | `leerlingNummer` |
 
-- The create.ps1 does not create accounts but merely correlates a HelloID person with a student in Somtoday.
+Correlation is based on the `leerlingNummer`. During the _create_ lifecycle action, all students (leerlingen) are retrieved. If a leerling with the specified `leerlingNummer` (from `correlationValue`) is found, the process verifies whether that leerling already has an associated account.
 
-## Setup the connector
+> [!NOTE]
+> If you also use Somtoday as a source system, you can extend your source person with the leerling `uuid`. Doing so eliminates the need to retrieve all leerlingen, making that step redundant. This requires modifications in the code to handle the `uuid` directly instead of fetching all student data.
+
+> [!WARNING]
+> The `leerlingNummer` must be known within _HelloID_ since this its value will be used for correlation.
+
+> [!TIP]
+> _For more information on correlation, please refer to our correlation [documentation](https://docs.helloid.com/en/provisioning/target-systems/powershell-v2-target-systems/correlation.html) pages_.
+
+### Available lifecycle actions
+
+The following lifecycle actions are available:
+
+| Action             | Description                                                                     |
+| ------------------ | ------------------------------------------------------------------------------- |
+| create.ps1         | Creates a new account.                                                          |
+| update.ps1         | Updates the attributes of an account.                                           |
+| configuration.json | Contains the connection settings and general configuration for the connector.   |
+| fieldMapping.json  | Defines mappings between person fields and target system person account fields. |
+
+### Field mapping
+
+The field mapping can be imported by using the _fieldMapping.json_ file.
+
+## Remarks
+
+### Configuration
+
+#### Environment
+
+Within the __configuration__, you can choose which environment you are using: test, acceptance, or production. The connector will automatically use the correct base URL to connect to Somtoday based on the selected environment.
+
+##### Proxy
+
+If you also want to use the _Tool4ever_ connector proxy, make sure to toggle the `UseConnectorProxy` setting in the configuration.
+
+> [!WARNING]
+> The proxy requires different credentials. Make sure to configure the appropriate credentials for the _Tool4ever_ connector proxy in the configuration settings.
+
+#### Instelling
+
+The `Instelling` is the name of the organization in Somtoday. An organization (instelling) can have multiple schools. The `schoolName` is determined by the `PrimaryContract.Department.DisplayName`.
+
+### SchoolName
+
+As mentioned [See: Instelling](#instelling), the `schoolName` is determined by the `PrimaryContract.Department.DisplayName`. If, in your environment, the `schoolName` is stored in a different property, make sure to update the code accordingly.
+
+> [!NOTE]
+> Accounts will only be created for the schoolName specified.
+
+### leerlingNummer
+
+The `leerlingNummer` is used for correlation wihtin the _create_ lifecycle action. Make sure the `leerlingNummer` is a available wihtin HelloID for the correlation to function correctly. FOr more information, refer to the [correlation section](#correlation-configuration).
+
+### AccountReference
+
+Within the _create_ lifecycle action, both the `leerlingUUD` and `schoolUUID` will be stored within the `accountReference`.
+
+### Remote Identifier Comparison
+
+The remoteidentifier property is a collection of objects (providerType, domain, identifier).
+The script checks for missing and newly added identifiers by converting them to JSON strings (compressed for easy comparison).
+If any identifiers are removed or added, they are stored in propertiesChanged with "Property" set to "remoteidentifier".
+
+If there are changes, the script prepares an update object (changedPropertiesObject).
+- For remoteidentifier, it extracts the first added identifier and stores it as a new object.
+- For other properties, it simply assigns the new value.
+
+### Logging
+
+A log message is generated for each updated property.
+- For remoteidentifier, it logs the removed and added values in detail.
+- For other properties, it logs the old and new values.
+
+## Development resources
+
+### API endpoints
+
+The following endpoints are used by the connector
+
+| Endpoint                             | Description                                         |
+| ------------------------------------ | --------------------------------------------------- |
+| /connect/vestiging/leerling/account  | Updates and retrieves student account information   |
+| /connect/instelling                  | Retrieve instellingen from Somtoday                 |
+| /connect/vestiging                   | Retrieve vestigingen from Somtoday                  |
+| /inloggen.{environment}/oauth2/token | Retrieve an oAuth token for a specific organization |
+
+### API documentation
+
+https://editor.swagger.io/?url=https://api.somtoday.nl/rest/v1/connect/documented/openapi
 
 ## Getting help
 
-> _For more information on how to configure a HelloID PowerShell connector, please refer to our [documentation](https://docs.helloid.com/hc/en-us/articles/360012558020-Configure-a-custom-PowerShell-target-system) pages_
+> [!TIP]
+> _For more information on how to configure a HelloID PowerShell connector, please refer to our [documentation](https://docs.helloid.com/en/provisioning/target-systems/powershell-v2-target-systems.html) pages_.
 
-> _If you need help, feel free to ask questions on our [forum](https://forum.helloid.com)_
+> [!TIP]
+>  _If you need help, feel free to ask questions on our [forum](https://forum.helloid.com/forum/helloid-connectors/provisioning/711-helloid-provisioning-target-somtoday-connectapi-students )_.
 
 ## HelloID docs
 
